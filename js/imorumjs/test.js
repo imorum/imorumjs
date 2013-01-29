@@ -1,0 +1,1 @@
+imorumjs.test = {};
