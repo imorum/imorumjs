@@ -16,29 +16,31 @@
 	<script src="js/imorumjs/animation/easing/BounceEase.js"></script>
 	<script src="js/imorumjs/animation/Post.js"></script>
 	<script type="text/javascript">
-		imorumjs.Plugin.readRepositoryConfig();
-		//imorumjs.Plugin.includeJS( "js/imorumjs/test.js" );
-		imorumjs.Plugin.require("testplugin", "1.0");
-		
-        function test() {
+	    this.xxx = function test() {
 			//var time = 0;
 			var left = 0;
 			var ns = imorumjs.animation;
-			var ease = new ns.BounceEase(ns.EaseMode.EaseOut, 3, 2);
-			var keyFrame = new ns.EasingKeyFrame(200, 1, ease);
-			var targetbox = document.getElementById('targetbox');
-			var startTime = imorumjs.sys.DateTime.now();
-			function render(timestamp) {
-				var currentTime = imorumjs.sys.DateTime.now();
-            	var remaining = Math.max( 0, startTime + 3000 - currentTime );
-            	var percent = 1 - ( remaining / 3000 || 0 );
-            	left = keyFrame.interpolate(0, 300, percent);
-            	targetbox.style.marginLeft = left + "px";
-            	if(percent<1) return true;
-            	else return false;
-            }
-			imorumjs.sys.Renderer.render({caller:this, func:render});
-        }
+			//var ease = new ns.BounceEase(ns.EaseMode.EaseOut, 3, 2);
+			//var keyFrame = new ns.EasingKeyFrame(200, 1, ease);
+			//var targetbox = document.getElementById('targetbox');
+			//var startTime = imorumjs.sys.DateTime.now();
+			//function render(timestamp) {
+			//	var currentTime = imorumjs.sys.DateTime.now();
+	        //	var remaining = Math.max( 0, startTime + 3000 - currentTime );
+	        //	var percent = 1 - ( remaining / 3000 || 0 );
+	        //	left = keyFrame.interpolate(0, 300, percent);
+	        //	targetbox.style.marginLeft = left + "px";
+	        //	if(percent<1) return true;
+	        //	else return false;
+	        //}
+			//imorumjs.sys.Renderer.render({caller:this, func:render});
+	    }
+	    var output = '';
+	    for (property in window.Function.prototype) {
+	      output += property + ': ' + object[property]+'; ';
+	    }
+	    alert(output);
+	    //this.xxx.apply(this);
 	</script>
     <style type="text/css">
         * { margin: 0px; padding: 0px; }
@@ -47,7 +49,7 @@
     </style>
 </head>
 
-<body onload="test()">
+<body>
 	<div id="targetbox" class="the_div" style="width: 500px; margin-left: 0px;"></div>
 </body>
 

@@ -1,20 +1,22 @@
-// Non Browser Support
-this.window = this;
+// Basic Namespace Type support
+$ns = function Namespace(){};
 
 // Pre-register imorumjs namespace
-window.imorumjs = {};
+imorumjs = new $ns();
+imorumjs.type = new $ns();
+imorumjs.type.Namespace = $ns;
 
 // HTTPRequest
-$s = imorumjs.sys = {};
+$t = imorumjs.sys = new $ns();
 
-$s.selectHttpRequest = function selectHttpRequest() {
+$t.selectHttpRequest = function selectHttpRequest() {
 	if (window.XMLHttpRequest) // Gecko
 		return new XMLHttpRequest();
 	else if (window.ActiveXObject) // IE
 		return new ActiveXObject("MsXml2.XmlHttp");
 }
 
-$s.request = function request(caller, type, url, callback) {
+$t.request = function request(caller, type, url, callback) {
 	var httpReq = imorumjs.sys.selectHttpRequest();
 	httpReq.open(type, url, false);
 	httpReq.send(null);
@@ -27,18 +29,18 @@ $s.request = function request(caller, type, url, callback) {
 	}
 }
 
-$s.requestGet = function requestGet(caller, url, callback) {
+$t.requestGet = function requestGet(caller, url, callback) {
 	imorumjs.sys.request(caller, 'GET', url, callback);
 }
 
 // Helper
-$s = imorumjs.helper = {};
+$t = imorumjs.Helper = {};
 
-$s.isArray = function isArray(o) {
+$t.isArray = function isArray(o) {
 	return Object.prototype.toString.call(o) === '[object Array]';
 }
 
-$s.processObjectOrArray = function processObjectOrArray(caller, val, objproc, arrproc) {
+$t.processObjectOrArray = function processObjectOrArray(caller, val, objproc, arrproc) {
 	if (!this.isArray(val)) {
 		objproc.call(caller, val);
 	} else {
@@ -48,14 +50,14 @@ $s.processObjectOrArray = function processObjectOrArray(caller, val, objproc, ar
 	}
 }
 
-$s.DOMNodeTypes = {
+$t.DOMNodeTypes = {
 		ELEMENT_NODE 	   : 1,
 		TEXT_NODE    	   : 3,
 		CDATA_SECTION_NODE : 4,
 		DOCUMENT_NODE 	   : 9
 	};
 
-$s.getNodeLocalName = function getNodeLocalName( node ) {
+$t.getNodeLocalName = function getNodeLocalName( node ) {
 	var nodeLocalName = node.localName;			
 	if(nodeLocalName == null) // Yeah, this is IE!! 
 		nodeLocalName = node.baseName;
@@ -64,11 +66,11 @@ $s.getNodeLocalName = function getNodeLocalName( node ) {
 	return nodeLocalName;
 }
 
-$s.getNodePrefix = function getNodePrefix(node) {
+$t.getNodePrefix = function getNodePrefix(node) {
 	return node.prefix;
 }
 
-$s.parseDOMChildren = function parseDOMChildren( node ) {
+$t.parseDOMChildren = function parseDOMChildren( node ) {
 	if(node.nodeType == this.DOMNodeTypes.DOCUMENT_NODE) {
 		var result = new Object;
 		var child = node.firstChild; 
@@ -139,7 +141,7 @@ $s.parseDOMChildren = function parseDOMChildren( node ) {
 	}	
 }
 
-$s.parseXmlString = function parseXmlString(xmlDocStr) {
+$t.parseXmlString = function parseXmlString(xmlDocStr) {
 	var xmlDoc;
 	if (window.DOMParser) {
 		var parser=new window.DOMParser();			
@@ -157,19 +159,19 @@ $s.parseXmlString = function parseXmlString(xmlDocStr) {
 	return xmlDoc;
 }
 
-$s.xml_str2json = function xml_str2json(xmlDocStr) {
+$t.xml_str2json = function xml_str2json(xmlDocStr) {
 	var xmlDoc = this.parseXmlString(xmlDocStr);	
 	return this.parseDOMChildren(xmlDoc);
 }
 
 // Plugin system
-$s = imorumjs.Plugin = {
+$t = imorumjs.Plugin = {
 	repositoryFile : "repositories.xml",
 	repositoryInfos : [],
 	loadedComponents: []
 };
 
-$s.includeJS = function includeJS(fileUrl) {
+$t.includeJS = function includeJS(fileUrl) {
 	var elHead = document.getElementsByTagName('HEAD').item(0);
 	var elScript = document.createElement("script");
 	elScript.language = "javascript";
@@ -178,25 +180,25 @@ $s.includeJS = function includeJS(fileUrl) {
 	elHead.appendChild(elScript);
 }
 
-$s.__getRepositoryInfo = function __getRepositoryInfo(url) {
+$t.__getRepositoryInfo = function __getRepositoryInfo(url) {
 	var storedInfo = null;
 	imorumjs.sys.requestGet(this, url + 'repository.xml', function(url,
 			response) {
-		storedInfo = imorumjs.helper.xml_str2json(response);
+		storedInfo = imorumjs.Helper.xml_str2json(response);
 	});
 	return storedInfo;
 }
 
-$s.__readRepoId = function __readRepoId(storedInfo) {
+$t.__readRepoId = function __readRepoId(storedInfo) {
 	return storedInfo.config.repositoryId;
 }
 
-$s.__readComponents = function __readComponents(storedInfo) {
+$t.__readComponents = function __readComponents(storedInfo) {
 	var components = [];
 	var arrComponents = storedInfo.config.components.component;
-	imorumjs.helper.processObjectOrArray(this, arrComponents, function(obj) {
+	imorumjs.Helper.processObjectOrArray(this, arrComponents, function(obj) {
 		var versions = [];
-		imorumjs.helper.processObjectOrArray(this, obj.versions.version, function(obj) {
+		imorumjs.Helper.processObjectOrArray(this, obj.versions.version, function(obj) {
 			versions.push(obj);
 		}, function(arrVer, j) {
 			versions.push(arrVer[j]);
@@ -208,7 +210,7 @@ $s.__readComponents = function __readComponents(storedInfo) {
 		});
 	}, function(arr, i) {
 		var versions = [];
-		imorumjs.helper.processObjectOrArray(this, arr[i].versions.version, function(obj) {
+		imorumjs.Helper.processObjectOrArray(this, arr[i].versions.version, function(obj) {
 			versions.push(obj);
 		}, function(arrVer, j) {
 			versions.push(arrVer[j]);
@@ -222,7 +224,7 @@ $s.__readComponents = function __readComponents(storedInfo) {
 	return components;
 }
 
-$s.readRepositoryConfig = function readRepositoryConfig(repositoryFile) {
+$t.readRepositoryConfig = function readRepositoryConfig(repositoryFile) {
 	var storedConfig;
 	if (repositoryFile == null)
 		repositoryFile = imorumjs.Plugin.repositoryFile;
@@ -231,9 +233,9 @@ $s.readRepositoryConfig = function readRepositoryConfig(repositoryFile) {
 					this,
 					repositoryFile,
 					function(fileUrl, response) {
-						storedConfig = imorumjs.helper.xml_str2json(response);
+						storedConfig = imorumjs.Helper.xml_str2json(response);
 						var arrRepos = storedConfig.repositories.url;
-						imorumjs.helper.processObjectOrArray(
+						imorumjs.Helper.processObjectOrArray(
 								this,
 								arrRepos,
 								function(obj) {
@@ -282,7 +284,7 @@ $s.readRepositoryConfig = function readRepositoryConfig(repositoryFile) {
 					});
 }
 
-$s.registerComponent = function registerComponent(componentId, version, dependencies, onDependenciesLoaded) {
+$t.registerComponent = function registerComponent(componentId, version, dependencies, onDependenciesLoaded) {
 	if(dependencies!=null)
 	{
 		for(var i=0; i<dependencies.length; i++){
@@ -312,7 +314,7 @@ $s.registerComponent = function registerComponent(componentId, version, dependen
 	// should check and call the dependant component onDependenciesLoaded
 }
 
-$s.require = function require(componentId, version){
+$t.require = function require(componentId, version){
 	// Auto-load component
 	var repoInfos = imorumjs.Plugin.repositoryInfos;
 	// search through all repositories
