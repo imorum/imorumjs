@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>ImorumJS</title>
+    <script src="../js/imorumjs/imorumjs.js"></script>
+    <script type="text/javascript">
+        imorumjs.addPath({"imorumjs" : "../js/imorumjs"});
+
+        imorumjs.include("imorumjs.component.TextBox", test);
+
+        function test() {
+            var tb = new imorumjs.component.TextBox("aaa","bbb");
+            tb.renderTo(document.body);
+        }
+    </script>
+</head>
+
+<body>
+</body>
+
+</html>

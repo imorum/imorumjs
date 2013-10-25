@@ -1,346 +1,232 @@
-// Basic Namespace Type support
-$ns = function Namespace(){};
+(function() {
+    // Basic Namespace Type support
+    function Namespace(){};
 
-// Pre-register imorumjs namespace
-imorumjs = new $ns();
-imorumjs.type = new $ns();
-imorumjs.type.Namespace = $ns;
+    // Pre-register imorumjs namespace
+    imorumjs = new Namespace();
+    imorumjs.rootns = this;
+    imorumjs.type = new Namespace();
+    imorumjs.type.Namespace = Namespace;
+    imorumjs.type.Namespace.prototype.apply = function(proto, override){
+        override = override || true;
+        for (var member in proto) {
+            if(override == true){
+                this[member] = proto[member];
+            }else{
+                if(this[member] == null){
+                    this[member] = proto[member];
+                }
+            }
+        }
+    }
 
-// HTTPRequest
-$t = imorumjs.sys = new $ns();
+    imorumjs.namespace = function(ns) {
+        var arrns = ns.split('.');
+        var currns = imorumjs.rootns;
+        for(var i in arrns) {
+            if(currns[arrns[i]] == null) {
+                currns[arrns[i]] = new Namespace();
+            }
+            currns = currns[arrns[i]];
+        }
+        return currns;
+    }
 
-$t.selectHttpRequest = function selectHttpRequest() {
-	if (window.XMLHttpRequest) // Gecko
-		return new XMLHttpRequest();
-	else if (window.ActiveXObject) // IE
-		return new ActiveXObject("MsXml2.XmlHttp");
-}
+    // Shortcut
+    function Shortcut(){};
+    imorumjs.x = new Shortcut();
 
-$t.request = function request(caller, type, url, callback) {
-	var httpReq = imorumjs.sys.selectHttpRequest();
-	httpReq.open(type, url, false);
-	httpReq.send(null);
-	if (httpReq.status == 200 || httpReq.status == 304) {
-		if (callback)
-			callback.call(caller, url, httpReq.responseText);
-	} else {
-		alert('Request error: ' + httpReq.statusText + ' (' + httpReq.status
-				+ ')');
-	}
-}
+    //Temporary
+    function Temp(){};
+    imorumjs.t = new Temp();
 
-$t.requestGet = function requestGet(caller, url, callback) {
-	imorumjs.sys.request(caller, 'GET', url, callback);
-}
+    // ajax request and js source handler
+    imorumjs.namespace("imorumjs.sys").apply({
+        selectHttpRequest : function() {
+            if (window.XMLHttpRequest) // Gecko
+                return new XMLHttpRequest();
+            else if (window.ActiveXObject) // IE
+                return new ActiveXObject("MsXml2.XmlHttp");
+        },
 
-// Helper
-$t = imorumjs.Helper = {};
+        request : function(caller, type, url, callback) {
+            var httpReq = this.selectHttpRequest();
+            httpReq.open(type, url, false);
+            httpReq.send(null);
+            if (httpReq.status == 200 || httpReq.status == 304) {
+                if (callback)
+                    callback.call(caller, url, httpReq.responseText);
+            } else {
+                alert('Request error: ' + httpReq.statusText + ' (' + httpReq.status
+                        + ')');
+            }
+        },
 
-$t.isArray = function isArray(o) {
-	return Object.prototype.toString.call(o) === '[object Array]';
-}
+        requestGet : function(caller, url, callback) {
+            this.request(caller, 'GET', url, callback);
+        },
 
-$t.processObjectOrArray = function processObjectOrArray(caller, val, objproc, arrproc) {
-	if (!this.isArray(val)) {
-		objproc.call(caller, val);
-	} else {
-		for ( var i = 0; i < val.length; i++) {
-			arrproc.call(caller, val, i);
-		}
-	}
-}
+        // import
+        _arrPath : {},
+        _importing : [],
+        isImported : function(ns){
+            var arrns = ns.split('.');
+            var currns = imorumjs.rootns;
+            for(var i in arrns) {
+                if(currns[arrns[i]] == null) return false;
+                currns = currns[arrns[i]];
+            }
+            return true;
+        },
+        _appendJStoHead : function(fileUrl, callback) {
+            var elHead = document.getElementsByTagName('HEAD').item(0);
+            var elScript = document.createElement("script");
+            elScript.language = "javascript";
+            elScript.type = "text/javascript";
+            elScript.src = fileUrl;
+            if(callback!=null){
+                if (elScript.readyState){  //IE
+                    elScript.onreadystatechange = function(){
+                        if (elScript.readyState === "loaded" ||
+                            elScript.readyState === "complete"){
+                            elScript.onreadystatechange = null;
+                            callback();
+                        }
+                    };
+                } else {  //Others
+                    elScript.onload = function(){
+                        callback();
+                    };
+                }
+            }
+            elHead.appendChild(elScript);
+        }
+    });
 
-$t.DOMNodeTypes = {
-		ELEMENT_NODE 	   : 1,
-		TEXT_NODE    	   : 3,
-		CDATA_SECTION_NODE : 4,
-		DOCUMENT_NODE 	   : 9
-	};
+    imorumjs.addPath = function(path){
+        if (path.constructor == Object) {
+            for (x in path)
+            {
+                imorumjs.sys._arrPath[x] = path[x];
+            }
+        }else{
+            alert('invalid argument');
+        }
+    }
 
-$t.getNodeLocalName = function getNodeLocalName( node ) {
-	var nodeLocalName = node.localName;			
-	if(nodeLocalName == null) // Yeah, this is IE!! 
-		nodeLocalName = node.baseName;
-	if(nodeLocalName == null || nodeLocalName=="") // =="" is IE too
-		nodeLocalName = node.nodeName;
-	return nodeLocalName;
-}
+    imorumjs.include = function(ns, callback){
+        if (ns instanceof Array) {
+            imorumjs.include(ns.pop(), function(){
+                if(ns.length>0){
+                    imorumjs.include(ns, callback);
+                }else{
+                    callback();
+                }
+            });
+        }else{
+            if(imorumjs.sys.isImported(ns)){
+                callback();
+                return;
+            }
+            imorumjs.sys._importing.push({'ns':ns,'callback':callback});
 
-$t.getNodePrefix = function getNodePrefix(node) {
-	return node.prefix;
-}
+            for (x in imorumjs.sys._arrPath)
+            {
+                if(ns.indexOf(x)==0){
+                    var tail = ns.substr(x.length+1);
+                    imorumjs.sys._appendJStoHead(imorumjs.sys._arrPath[x] + '/' + tail.replace(/\./g, '/') + '.js', checkImportCallback);
+                }
+            }
+        }
+    }
 
-$t.parseDOMChildren = function parseDOMChildren( node ) {
-	if(node.nodeType == this.DOMNodeTypes.DOCUMENT_NODE) {
-		var result = new Object;
-		var child = node.firstChild; 
-		var childName = this.getNodeLocalName(child);
-		result[childName] = this.parseDOMChildren(child);
-		return result;
-	}
-	else
-	if(node.nodeType == this.DOMNodeTypes.ELEMENT_NODE) {
-		var result = new Object;
-		result.__cnt=0;
-		
-		var nodeChildren = node.childNodes;
-		
-		// Children nodes
-		for(var cidx=0; cidx <nodeChildren.length; cidx++) {
-			var child = nodeChildren.item(cidx); // nodeChildren[cidx];
-			var childName = this.getNodeLocalName(child);
-			
-			result.__cnt++;
-			if(result[childName] == null) {
-				result[childName] = this.parseDOMChildren(child);
-			}
-			else {
-				if(result[childName] != null) {
-					if( !(result[childName] instanceof Array)) {
-						var tmpObj = result[childName];
-						result[childName] = new Array();
-						result[childName][0] = tmpObj;
-					}
-				}
-				var aridx = 0;
-				while(result[childName][aridx]!=null) aridx++;
-				(result[childName])[aridx] = this.parseDOMChildren(child);
-			}			
-		}
-		
-		// Attributes
-		for(var aidx=0; aidx <node.attributes.length; aidx++) {
-			var attr = node.attributes.item(aidx); // [aidx];
-			result.__cnt++;
-			result["_"+attr.name]=attr.value;
-		}
-		
-		// Node namespace prefix
-		var nodePrefix = this.getNodePrefix(node);
-		if(nodePrefix!=null && nodePrefix!="") {
-			result.__cnt++;
-			result.__prefix=nodePrefix;
-		}
-		
-		if( result.__cnt == 1 && result["#text"]!=null  ) {
-			result = result["#text"];
-		} 
-		
-		if(result["#text"]!=null) {
-			delete result["#text"];
-		}
-		if(result["#cdata-section"]!=null) {
-			delete result["#cdata-section"];
-		}
-		delete result["__cnt"];
-		return result;
-	}
-	else
-	if(node.nodeType == this.DOMNodeTypes.TEXT_NODE || node.nodeType == this.DOMNodeTypes.CDATA_SECTION_NODE) {
-		return node.nodeValue;
-	}	
-}
+    function checkImportCallback(){
+        var importing = imorumjs.sys._importing;
+        for(var i=0; i<importing.length; i++) {
+            if(imorumjs.sys.isImported(importing[i].ns)) {
+                importing[i].callback();
+                importing.splice(i,1);
+                checkImportCallback();
+                return;
+            }
+        }
+    }
 
-$t.parseXmlString = function parseXmlString(xmlDocStr) {
-	var xmlDoc;
-	if (window.DOMParser) {
-		var parser=new window.DOMParser();			
-		xmlDoc = parser.parseFromString( xmlDocStr, "text/xml" );
-	}
-	else {
-		// IE :(
-		if(xmlDocStr.indexOf("<?")==0) {
-			xmlDocStr = xmlDocStr.substr( xmlDocStr.indexOf("?>") + 2 );
-		}
-		xmlDoc=new ActiveXObject("Microsoft.XMLDOM");
-		xmlDoc.async="false";
-		xmlDoc.loadXML(xmlDocStr);
-	}
-	return xmlDoc;
-}
+    // data
+    imorumjs.namespace("imorumjs.data");
 
-$t.xml_str2json = function xml_str2json(xmlDocStr) {
-	var xmlDoc = this.parseXmlString(xmlDocStr);	
-	return this.parseDOMChildren(xmlDoc);
-}
+    imorumjs.data.merge = function (target) {
+        target = target || {};
+        foreach(arguments, function(o) {
+            if (o) {
+                forIn(o, function(v, n) {
+                    target[n] = v;
+                });
+            }
+        }, 1);
+        return target;
+    }
+    imorumjs.data.forIn = function (obj, callback) {
+        for (var x in obj) {
+            //if (obj.hasOwnProperty(x)) callback(obj[x], x);
+            callback(obj[x], x);
+        }
+    }
+    imorumjs.data.foreach = function (arr, callback, start) {
+        var cancelled = false;
+        if (arr) {
+            // javascript array
+            arr = arr !== window && typeof(arr.nodeType) === "undefined" &&
+                (arr instanceof Array ||
+                // arguments array, or nodelist (has .item and is not a dom element or window)
+                (typeof(arr.length) === 'number' && (typeof(arr.callee) === "function" || (arr.item && typeof(arr.nodeType) === "undefined") && !arr.addEventListener && !arr.attachEvent)))
+                ? arr : [arr];
+            for (var i = start||0, l = arr.length; i < l; i++) {
+                if (callback(arr[i], i)) {
+                    cancelled = true;
+                    break;
+                }
+            }
+        }
+        return !cancelled;
+    }
+    imorumjs.data.callIf = function (obj, name, args) {
+        // calls a function on an object if it exists, passing in the optional arguments
+        var fn = obj[name],
+            exists = typeof(fn) === "function";
+        if (exists) fn.call(obj, args);
+        return exists;
+    }
 
-// Plugin system
-$t = imorumjs.Plugin = {
-	repositoryFile : "repositories.xml",
-	repositoryInfos : [],
-	loadedComponents: []
-};
+    imorumjs.data.removeByValue = function(arr, val) {
+        for(var i=0; i<arr.length; i++) {
+            if(arr[i] == val) {
+                arr.splice(i, 1);
+                break;
+            }
+        }
+    }
 
-$t.includeJS = function includeJS(fileUrl) {
-	var elHead = document.getElementsByTagName('HEAD').item(0);
-	var elScript = document.createElement("script");
-	elScript.language = "javascript";
-	elScript.type = "text/javascript";
-	elScript.src = fileUrl;
-	elHead.appendChild(elScript);
-}
+    imorumjs.data.removeByReference = function(arr, ref) {
+        for(var i=0; i<arr.length; i++) {
+            if(arr[i] === ref) {
+                arr.splice(i, 1);
+                break;
+            }
+        }
+    }
 
-$t.__getRepositoryInfo = function __getRepositoryInfo(url) {
-	var storedInfo = null;
-	imorumjs.sys.requestGet(this, url + 'repository.xml', function(url,
-			response) {
-		storedInfo = imorumjs.Helper.xml_str2json(response);
-	});
-	return storedInfo;
-}
-
-$t.__readRepoId = function __readRepoId(storedInfo) {
-	return storedInfo.config.repositoryId;
-}
-
-$t.__readComponents = function __readComponents(storedInfo) {
-	var components = [];
-	var arrComponents = storedInfo.config.components.component;
-	imorumjs.Helper.processObjectOrArray(this, arrComponents, function(obj) {
-		var versions = [];
-		imorumjs.Helper.processObjectOrArray(this, obj.versions.version, function(obj) {
-			versions.push(obj);
-		}, function(arrVer, j) {
-			versions.push(arrVer[j]);
-		});
-		components.push({
-			'groupId' : obj.groupId,
-			'componentId' : obj.componentId,
-			'versions' : versions
-		});
-	}, function(arr, i) {
-		var versions = [];
-		imorumjs.Helper.processObjectOrArray(this, arr[i].versions.version, function(obj) {
-			versions.push(obj);
-		}, function(arrVer, j) {
-			versions.push(arrVer[j]);
-		});
-		components.push({
-			'groupId' : arr[i].groupId,
-			'componentId' : arr[i].componentId,
-			'versions' : versions
-		});
-	});
-	return components;
-}
-
-$t.readRepositoryConfig = function readRepositoryConfig(repositoryFile) {
-	var storedConfig;
-	if (repositoryFile == null)
-		repositoryFile = imorumjs.Plugin.repositoryFile;
-	imorumjs.sys
-			.requestGet(
-					this,
-					repositoryFile,
-					function(fileUrl, response) {
-						storedConfig = imorumjs.Helper.xml_str2json(response);
-						var arrRepos = storedConfig.repositories.url;
-						imorumjs.Helper.processObjectOrArray(
-								this,
-								arrRepos,
-								function(obj) {
-									var storedInfo = imorumjs.Plugin
-											.__getRepositoryInfo(obj);
-									imorumjs.Plugin.repositoryInfos.push({
-										'id' : imorumjs.Plugin
-												.__readRepoId(storedInfo),
-										'url' : obj,
-										'components' : imorumjs.Plugin
-												.__readComponents(storedInfo)
-									});
-								},
-								function(arr, i) {
-									// check for duplication by url
-									var exist = false;
-									for ( var j = 0; j < imorumjs.Plugin.repositoryInfos.length; j++) {
-										if (imorumjs.Plugin.repositoryInfos[j].url == arr[i]) {
-											exist = true;
-											break;
-										}
-									}
-									if (!exist) {
-										// check again for duplication by id
-										var storedInfo = imorumjs.Plugin
-												.__getRepositoryInfo(arr[i]);
-										var repositoryId = imorumjs.Plugin
-												.__readRepoId(storedInfo);
-										for ( var j = 0; j < imorumjs.Plugin.repositoryInfos.length; j++) {
-											if (imorumjs.Plugin.repositoryInfos[j].id == repositoryId) {
-												exist = true;
-												break;
-											}
-										}
-										if (!exist) {
-											imorumjs.Plugin.repositoryInfos
-													.push({
-														'id' : repositoryId,
-														'url' : arr[i],
-														'components' : imorumjs.Plugin
-																.__readComponents(storedInfo)
-													});
-										}
-									}
-								});
-					});
-}
-
-$t.registerComponent = function registerComponent(componentId, version, dependencies, onDependenciesLoaded) {
-	if(dependencies!=null)
-	{
-		for(var i=0; i<dependencies.length; i++){
-			var loadedComponent = null;
-			for(var j=0; j<this.loadedComponents.length; j++){
-				if(dependencies[i].id === this.loadedComponents[j].id){
-					loadedComponent=this.loadedComponents[j];
-					break;
-				}
-			}
-			if(loadedComponent === null){
-				imorumjs.Plugin.require(dependencies[i].id, dependencies[i].version);
-			}else if(dependencies[i].version !== loadedComponent.version){
-				alert('Warning: Component ' + loadedComponent.id + ' is already loaded at version ' + loadedComponent.version + 
-						'.\nDependant Component: ' + componentId + ' version ' + version );
-			}
-		}
-	}
-	// This should be called when all dependencies component have been loaded
-	if(onDependenciesLoaded!=null){
-		if(onDependenciesLoaded.call(this)){
-			this.loadedComponents.push({'id': componentId, 'version': version});
-		}
-	}else{
-		this.loadedComponents.push({'id': componentId, 'version': version});
-	}
-	// should check and call the dependant component onDependenciesLoaded
-}
-
-$t.require = function require(componentId, version){
-	// Auto-load component
-	var repoInfos = imorumjs.Plugin.repositoryInfos;
-	// search through all repositories
-	for(var j=0; j<repoInfos.length; j++){
-		// scan components
-		var components = repoInfos[j].components;
-		for(var k=0; k<components.length; k++){
-			if(componentId === components[k].componentId){
-				var groupPath = components[k].groupId.replace(/\./g, '/');
-				var versions = components[k].versions;
-				var isVersionAvailable=false;
-				for(var v=0; v<versions.length; v++){
-					if(versions[v] === version){
-						isVersionAvailable=true;
-						break;
-					}
-				}
-				var versionToLoad = versions[0];
-				if(isVersionAvailable){
-					versionToLoad = version;
-				}else{
-					// TODO: find in other repository first
-					alert('Warning: Component ' + componentId + ' version ' + version + ' is not available, using version ' + versionToLoad + 'as default');
-				}
-				imorumjs.Plugin.includeJS( repoInfos[j].url + groupPath + '/' + components[k].componentId + '/' + versionToLoad + '/' + components[k].componentId + '-' + versionToLoad + '.js');						
-			}
-		}
-	}	
-}
+    // types
+    $c = imorumjs.Class = imorumjs.type.Class = {}
+    imorumjs.x.inherit = imorumjs.type.Class.inherit = function(child, parent){
+        var fn = child.toString().match(/function\s+([^\s\(]+)/)[1]; // Get function name
+        eval(
+            "function " + fn + "(){}; " +
+                fn + ".prototype = parent.prototype; " +
+                "child.prototype = new " + fn + "();"
+        );
+        child.prototype.constructor = child;
+        return child.prototype;
+    }
+    imorumjs.type.Enum = function Enum(){};
+})();

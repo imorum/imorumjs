@@ -16,11 +16,22 @@
 	<script src="js/imorumjs/animation/easing/BounceEase.js"></script>
 	<script src="js/imorumjs/animation/Post.js"></script>
 	<script type="text/javascript">
-		imorumjs.Plugin.readRepositoryConfig();
-		//imorumjs.Plugin.includeJS( "js/imorumjs/test.js" );
-		imorumjs.Plugin.require("testplugin", "1.0");
+		imorumjs.addPath({"imorumjs" : "js/imorumjs"});
+		
+		imorumjs.include("imorumjs.Plugin");
+		
+		imorumjs.afterImport(function(){
+    		imorumjs.Plugin.readRepositoryConfig();
+    		//imorumjs.Plugin.includeJS( "js/imorumjs/test.js" );
+    		imorumjs.Plugin.require("testplugin", "1.0");			
+		})
+		//if(!imorumjs.sys.isImported("imorumjs.Plugin")) alert("aaa");
+		
+		
+		
 		
         function test() {
+   		
 			//var time = 0;
 			var left = 0;
 			var ns = imorumjs.animation;

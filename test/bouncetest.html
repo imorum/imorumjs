@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<title>ImorumJS</title>
+	<script src="../js/imorumjs/imorumjs.js"></script>
+	<script src="../js/imorumjs/sys/DateTime.js"></script>
+	<script src="../js/imorumjs/sys/Renderer.js"></script>
+	<script src="../js/imorumjs/animation/Pre.js"></script>
+	<script src="../js/imorumjs/animation/KeyFrame.js"></script>
+	<script src="../js/imorumjs/animation/EasingKeyFrame.js"></script>
+	<script src="../js/imorumjs/animation/EaseMode.js"></script>
+	<script src="../js/imorumjs/animation/Post.js"></script>
+	<script type="text/javascript">
+		imorumjs.addPath({"imorumjs" : "../js/imorumjs"});
+		
+		/*imorumjs.include("imorumjs.Plugin", testplugin);
+		
+		function testplugin(){
+            imorumjs.Plugin.repositoryFile = "../repositories.xml";
+    		imorumjs.Plugin.readRepositoryConfig();
+    		//imorumjs.Plugin.includeJS( "js/imorumjs/test.js" );
+    		imorumjs.Plugin.require("testplugin", "1.0");			
+		}*/
+		//if(!imorumjs.sys.isImported("imorumjs.Plugin")) alert("aaa");
+
+        imorumjs.include(["imorumjs.Plugin", "imorumjs.animation.easing.BounceEase"], test);
+
+        function test() {
+   		
+			//var time = 0;
+			var left = 0;
+			var ns = imorumjs.animation;
+			var ease = new imorumjs.animation.easing.BounceEase(ns.EaseMode.EaseOut, 3, 2);
+			var keyFrame = new ns.EasingKeyFrame(200, 1, ease);
+			var targetbox = document.getElementById('targetbox');
+			var startTime = imorumjs.sys.DateTime.now();
+			function render(timestamp) {
+				var currentTime = imorumjs.sys.DateTime.now();
+            	var remaining = Math.max( 0, startTime + 3000 - currentTime );
+            	var percent = 1 - ( remaining / 3000 || 0 );
+            	left = keyFrame.interpolate(0, 300, percent);
+            	targetbox.style.marginLeft = left + "px";
+            	if(percent<1) return true;
+            	else return false;
+            }
+			imorumjs.sys.Renderer.render({caller:this, func:render});
+
+        }
+
+        //imorumjs.afterImport(function(){
+            //test();
+        //})
+	</script>
+    <style type="text/css">
+        * { margin: 0px; padding: 0px; }
+        body { padding: 40px 100px; }
+        .the_div { height: 100px; border: 2px solid black; background-color: rgba(255, 192, 0, 0.5); }
+    </style>
+</head>
+
+<body>
+	<div id="targetbox" class="the_div" style="width: 500px; margin-left: 0px;"></div>
+</body>
+
+</html>
